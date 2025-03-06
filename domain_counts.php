@@ -222,6 +222,8 @@
 	echo "<br /><br />\n";
 
 	echo "<form name='frm' method='post' action='domain_counts_delete.php'>\n";
+
+	echo "<div class='card'>\n";
 	echo "<table class='tr_hover' width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
 	echo "<tr>\n";
 	echo th_order_by('domain_name', $text['label-domain_name'], $order_by, $order);
@@ -258,8 +260,10 @@
 		}
 	}
 
-	echo "</table>";
-	echo "</form>";
+	echo "</table>\n";
+	echo "</div>\n";
+
+	echo "</form>\n";
 
 //show the footer
 	require_once "resources/footer.php";
