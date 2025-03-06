@@ -167,6 +167,8 @@
 	echo "<br /><br />\n";
 
 	echo "<form name='frm' method='post' action='domain_counts_delete.php'>\n";
+
+	echo "<div class='card'>\n";
 	echo "<table class='tr_hover' width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
 	echo "<tr>\n";
 	echo th_order_by('acountcode', $text['label-accountcode'], $order_by, $order);
@@ -181,6 +183,8 @@
 	}
 
 	echo "</table>";
+	echo "</div>\n";
+
 	echo "</form>";
 
 //show the footer
