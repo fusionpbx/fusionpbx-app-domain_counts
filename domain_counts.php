@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Code is
 	Mark J Crane <markjcrane@fusionpbx.com>
-	Portions created by the Initial Developer are Copyright (C) 2008-2023
+	Portions created by the Initial Developer are Copyright (C) 2008-2025
 	the Initial Developer. All Rights Reserved.
 
 	Contributor(s):
@@ -27,13 +27,9 @@
 //includes files
 	require_once dirname(__DIR__, 2) . "/resources/require.php";
 	require_once "resources/check_auth.php";
-	require_once "resources/paging.php";	
-
-//include the class
-	require_once "resources/check_auth.php";
+	require_once "resources/paging.php";
 
 //check permissions
-	require_once "resources/check_auth.php";
 	if (permission_exists('domain_counts_view')) {
 		//access granted
 	}
@@ -41,10 +37,13 @@
 		echo "access denied";
 		exit;
 	}
-	
+
 //add multi-lingual support
 	$language = new text;
 	$text = $language->get();
+
+//get the settings
+	$settings = new settings(['database' => $database, 'domain_uuid' => $_SESSION['domain_uuid'] ?? '', 'user_uuid' => $_SESSION['user_uuid'] ?? '']);
 
 //get the http values and set them as variables
 	$order_by = check_str($_GET["order_by"]);
@@ -53,7 +52,7 @@
 //handle search term
 	$search = check_str($_GET["search"]);
 	if (strlen($search) > 0) {
-		$sql_mod = "WHERE d.domain_name like '%".$search."%' "; 
+		$sql_mod = "WHERE d.domain_name like '%".$search."%' ";
 	}
 	if (strlen($order_by) < 1) {
 		$order_by = "domain_name";
@@ -71,12 +70,12 @@
 	$sql .= "select count(*) from v_extensions \n";
 	$sql .= "where domain_uuid = d.domain_uuid\n";
 	$sql .= ") as extension_count, \n";
-	
+
 	//users
 	$sql .= "(\n";
 	$sql .= "select count(*) from v_users \n";
 	$sql .= "where domain_uuid = d.domain_uuid\n";
-	$sql .= ") as user_count, \n";	
+	$sql .= ") as user_count, \n";
 
 	//devices
 	$sql .= "(\n";
@@ -89,7 +88,7 @@
 	$sql .= "select count(*) from v_destinations \n";
 	$sql .= "where domain_uuid = d.domain_uuid\n";
 	$sql .= ") as destination_count, \n";
-	
+
 	//faxes
 	$sql .= "(\n";
 	$sql .= "select count(*) from v_fax \n";
@@ -125,13 +124,13 @@
 	$sql .= "select count(*) from v_contacts \n";
 	$sql .= "where domain_uuid = d.domain_uuid\n";
 	$sql .= ") as contact_count, \n";
-	
+
 	//accountcodes
 	$sql .= "(\n";
 	$sql .= "select count(DISTINCT accountcode) from v_extensions \n";
 	$sql .= "where domain_uuid = d.domain_uuid\n";
-	$sql .= ") as accountcode_count \n";	
-	
+	$sql .= ") as accountcode_count \n";
+
 	$sql .= "FROM v_domains as d \n";
 	$sql .= $sql_mod; //add search mod from above
 	$sql .= "ORDER BY ".$order_by." ".$order." \n";
@@ -144,13 +143,13 @@
 	$database->table = "v_domains";
 	$where[1]["name"] = "domain_uuid";
 	$where[1]["operator"] = "=";
-	$where[1]["value"] = "*";	
+	$where[1]["value"] = "*";
 	$numeric_domain_counts = $database->count();
-	unset($database,$result);	
+	unset($database,$result);
 
 //set the http header
 	if ($_REQUEST['type'] == "csv") {
-	
+
 		//set the headers
 			header('Content-type: application/octet-binary');
 			header("Content-Disposition: attachment; filename=domain-counts_" . date("Y-m-d") . ".csv");
@@ -167,7 +166,7 @@
 				$z++;
 			}
 			echo "\n";
-		
+
 		//add the values to the csv
 			$x = 0;
 			foreach($domain_counts as $domains) {
@@ -186,7 +185,7 @@
 			}
 			exit;
 	}
-	
+
 //additional includes
 	require_once "resources/header.php";
 	$document['title'] = $text['title-domain_counts'];
@@ -195,49 +194,32 @@
 	$c = 0;
 	$row_style["0"] = "row_style0";
 	$row_style["1"] = "row_style1";
-	
-//show the content
-	echo "<table width=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\n";
-	echo "  <tr>\n";
-	echo "	<td align='left' width='100%'>\n";
-	if (permission_exists('domain_counts_view_all')) {
-		echo "		<b>".$text['header-domain_counts']."  (".$numeric_domain_counts.")</b><br>\n";
-	}
-	if (permission_exists('domain_counts_view_domain')) {
-		echo "		<b>".$text['header-domain_counts']."</b><br>\n";
-	}	
-	echo "	</td>\n";
-	echo "		<td align='right' width='100%' style='vertical-align: top;'>";
-	echo "		<form method='get' action=''>\n";
-	echo "			<td style='vertical-align: top; text-align: right; white-space: nowrap;'>\n";
-	if (permission_exists('domain_counts_view_all')) {
-		echo "				<input type='text' class='txt' style='width: 150px' name='search' id='search' value='".$search."'>";
-		echo "				<input type='submit' class='btn' name='submit' value='".$text['button-search']."'>";
-	}
-	echo "				<input type='button' class='btn' value='".$text['button-export']."' ";
-	echo "onclick=\"window.location='domain_counts.php?";
-	if (strlen($_SERVER["QUERY_STRING"]) > 0) { 
-		echo $_SERVER["QUERY_STRING"]."&type=csv';\">\n";
-	} else { 
-		echo "type=csv';\">\n";
-	}
 
+//show the content
+	echo "<div class='action_bar' id='action_bar'>\n";
+	if (permission_exists('domain_counts_view_all')) {
+		echo "		<div class='heading'><b>".$text['header-domain_counts']."</b><div class='count'>".number_format($numeric_domain_counts)."</div></div>\n";
+	} else if (permission_exists('domain_counts_view_domain')) {
+		echo "		<div class='heading'><b>".$text['header-domain_counts']."</b></div><br>\n";
+	}
+	echo "	<div class='actions'>\n";
+	echo "		<form method='get' action=''>\n";
+	echo button::create(['type'=>'button','label'=>$text['button-export'],'icon'=>$settings->get('theme', 'button_icon_export'),'style'=>'margin-right: 15px;','onclick'=>"window.location='domain_counts.php?".(!empty($_SERVER["QUERY_STRING"]) ? $_SERVER["QUERY_STRING"]."&type=csv';" : "type=csv';")]);
+	if (permission_exists('domain_counts_view_all')) {
+		echo "		<input type='text' class='txt' style='width: 150px' name='search' id='search' value=\"".escape($search)."\" placeholder=\"".$text['label-search']."\" onkeydown=''>";
+		echo button::create(['label'=>$text['button-search'],'icon'=>$settings->get('theme', 'button_icon_search'),'type'=>'submit','id'=>'btn_search']);
+	}
 
 #	if ($paging_controls_mini != '') {
 #		echo 			"<span style='margin-left: 15px;'>".$paging_controls_mini."</span>\n";
 #	}
-	echo "			</td>\n";
-	echo "		</form>\n";	
-	echo "  </tr>\n";
-	
-	
-	echo "	<tr>\n";
-	echo "		<td colspan='2'>\n";
-	echo "			".$text['description-domain_counts']."\n";
-	echo "		</td>\n";
-	echo "	</tr>\n";
-	echo "</table>\n";
-	echo "<br />";
+	echo "		</form>\n";
+	echo "	</div>\n";
+	echo "	<div style='clear: both;'></div>\n";
+	echo "</div>\n";
+
+	echo $text['description-domain_counts']."\n";
+	echo "<br /><br />\n";
 
 	echo "<form name='frm' method='post' action='domain_counts_delete.php'>\n";
 	echo "<table class='tr_hover' width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
@@ -251,13 +233,13 @@
 	echo th_order_by('ivr_count', $text['label-ivrs'], $order_by, $order);
 	echo th_order_by('voicemail_count', $text['label-voicemails'], $order_by, $order);
 	echo th_order_by('ring_group_count', $text['label-ring_groups'], $order_by, $order);
-	echo th_order_by('cc_queue_count', $text['label-cc_queues'], $order_by, $order);	
+	echo th_order_by('cc_queue_count', $text['label-cc_queues'], $order_by, $order);
 	echo th_order_by('contact_count', $text['label-contacts'], $order_by, $order);
-	echo th_order_by('accountcode_count', $text['label-accountcodes'], $order_by, $order);	
+	echo th_order_by('accountcode_count', $text['label-accountcodes'], $order_by, $order);
 	echo "</tr>\n";
 
 	if (isset($domain_counts)) foreach ($domain_counts as $key => $row) {
-		
+
 		if (permission_exists('domain_counts_view_all') || (permission_exists('domain_counts_view_domain') && $_SESSION['domain_name'] == $row['domain_name']) ) {
 			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['domain_name'])."</td>\n";
 			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['extension_count'])."&nbsp;</td>\n";
@@ -270,7 +252,7 @@
 			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['ring_group_count'])."&nbsp;</td>\n";
 			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['cc_queue_count'])."&nbsp;</td>\n";
 			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['contact_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'><a href='domain_counts_accountcodes.php?id=".escape($row['domain_uuid'])."'>".escape($row['accountcode_count'])."&nbsp;</td>\n";		
+			echo "	<td valign='top' class='".$row_style[$c]."'><a href='domain_counts_accountcodes.php?id=".escape($row['domain_uuid'])."'>".escape($row['accountcode_count'])."&nbsp;</td>\n";
 			echo "</tr>\n";
 			$c = ($c==0) ? 1 : 0;
 		}
