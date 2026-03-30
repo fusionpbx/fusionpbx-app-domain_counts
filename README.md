@@ -13,7 +13,6 @@ Clone the FusionPBX-Apps repo into the working path after SSHing/Moshing into yo
 cd /var/www/fusionpbx/app
 git clone https://github.com/fusionpbx/fusionpbx-apps-domain_counts domain_counts
 php /var/www/fusionpbx/core/upgrade/upgrade.php
-chown -R www-data:www-data /var/www/fusionpbx/app/domain_counts
 ```
 
 Then navigate to **Advanced** > **Upgrade**. Run **Menu Defaults** and **Permission Defaults**.
