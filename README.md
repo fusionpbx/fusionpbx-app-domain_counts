@@ -2,7 +2,7 @@
 
 Totals the number of configured extensions, voicemail boxes, ring groups and the like per Domain, with the ability to export all this data to a CSV so you can open it in your favorite spreadsheet software!
 
-![Image of Domain Counts](Domain-Counts-Overview.png)
+![Image of Domain Counts](Domain-Counts-Overview-1.png)
 
 ## Installation
 This was tested with FusionPBX 4.5.1 (current master at time of writing) and will likely work on newer or slightly older versions of FusionPBX.
