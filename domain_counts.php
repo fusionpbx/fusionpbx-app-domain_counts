@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Code is
 	Mark J Crane <markjcrane@fusionpbx.com>
-	Portions created by the Initial Developer are Copyright (C) 2008-2025
+	Portions created by the Initial Developer are Copyright (C) 2008-2026
 	the Initial Developer. All Rights Reserved.
 
 	Contributor(s):
@@ -42,15 +42,19 @@
 	$language = new text;
 	$text = $language->get();
 
+//initialize the database
+	$database = new database;
+
 //get the settings
 	$settings = new settings(['database' => $database, 'domain_uuid' => $_SESSION['domain_uuid'] ?? '', 'user_uuid' => $_SESSION['user_uuid'] ?? '']);
 
 //get the http values and set them as variables
-	$order_by = check_str($_GET["order_by"]);
-	$order = check_str($_GET["order"]);
+	$order_by = $_GET["order_by"] ?? '';
+	$order = $_GET["order"] ?? '';
 
 //handle search term
-	$search = check_str($_GET["search"]);
+	$search = $_GET["search"] ?? '';
+	$sql_mod = '';
 	if (strlen($search) > 0) {
 		$sql_mod = "WHERE d.domain_name like '%".$search."%' ";
 	}
@@ -135,20 +139,27 @@
 	$sql .= $sql_mod; //add search mod from above
 	$sql .= "ORDER BY ".$order_by." ".$order." \n";
 
-	$database = new database;
 	$domain_counts = $database->select($sql, null);
 
-//lookup the domain count
-	$database = new database;
-	$database->table = "v_domains";
-	$where[1]["name"] = "domain_uuid";
-	$where[1]["operator"] = "=";
-	$where[1]["value"] = "*";
-	$numeric_domain_counts = $database->count();
-	unset($database,$result);
+//add the search string
+	if (!empty($search)) {
+		$search =  strtolower($_GET["search"]);
+		$sql_search = " (";
+		$sql_search .= "	lower(domain_name) like :search ";
+		$sql_search .= "	or lower(domain_description) like :search ";
+		$sql_search .= ") ";
+		$parameters['search'] = '%'.$search.'%';
+	}
+
+//get the count
+	$sql = "select count(domain_uuid) from v_domains ";
+	if (!empty($sql_search)) {
+		$sql .= "where ".$sql_search;
+	}
+	$num_rows = $database->select($sql, $parameters ?? null, 'column');
 
 //set the http header
-	if ($_REQUEST['type'] == "csv") {
+	if (!empty($_REQUEST['type']) && $_REQUEST['type'] == "csv") {
 
 		//set the headers
 			header('Content-type: application/octet-binary');
@@ -198,7 +209,7 @@
 //show the content
 	echo "<div class='action_bar' id='action_bar'>\n";
 	if (permission_exists('domain_counts_view_all')) {
-		echo "		<div class='heading'><b>".$text['header-domain_counts']."</b><div class='count'>".number_format($numeric_domain_counts)."</div></div>\n";
+		echo "		<div class='heading'><b>".$text['header-domain_counts']."</b><div class='count'>".number_format($num_rows)."</div></div>\n";
 	} else if (permission_exists('domain_counts_view_domain')) {
 		echo "		<div class='heading'><b>".$text['header-domain_counts']."</b></div><br>\n";
 	}
