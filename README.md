@@ -11,7 +11,7 @@ Clone the FusionPBX-Apps repo into the working path after SSHing/Moshing into yo
 
 ```
 cd /var/www/fusionpbx/app
-git clone https://github.com/fusionpbx/fusionpbx-apps-domain_counts domain_counts
+git clone https://github.com/fusionpbx/fusionpbx-app-domain_counts.git domain_counts
 php /var/www/fusionpbx/core/upgrade/upgrade.php
 ```
 
