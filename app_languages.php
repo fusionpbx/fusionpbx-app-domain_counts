@@ -11,6 +11,8 @@ $text['description-domain_counts_accountcodes']['en-us'] = "Displays the number 
 
 $text['label-domain_name']['en-us'] = "Domain Name";
 
+$text['label-domain_disabled']['en-us'] = " (disabled)";
+
 $text['label-extensions']['en-us'] = "Extensions";
 
 $text['label-users']['en-us'] = "Users";
@@ -21,9 +23,9 @@ $text['label-destinations']['en-us'] = "Destinations";
 
 $text['label-faxes']['en-us'] = "Faxes";
 
-$text['label-ivrs']['en-us'] = "IVR's";
+$text['label-ivrs']['en-us'] = "IVRs";
 
-$text['label-voicemails']['en-us'] = "Voicemails";
+$text['label-voicemail-boxes']['en-us'] = "Vmail Boxes";
 
 $text['label-ring_groups']['en-us'] = "Ring Groups";
 
