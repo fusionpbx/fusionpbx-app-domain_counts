@@ -22,6 +22,7 @@
 
 	Contributor(s):
 	KonradSC <konrd@yahoo.com>
+	Chansizzle
 */
 
 //includes files
@@ -68,24 +69,7 @@
 	$sql .= "d.domain_uuid, \n";
 	$sql .= "d.domain_name, \n";
 	$sql .= "d.domain_description, \n";
-
-	//extension
-	$sql .= "(\n";
-	$sql .= "select count(*) from v_extensions \n";
-	$sql .= "where domain_uuid = d.domain_uuid\n";
-	$sql .= ") as extension_count, \n";
-
-	//users
-	$sql .= "(\n";
-	$sql .= "select count(*) from v_users \n";
-	$sql .= "where domain_uuid = d.domain_uuid\n";
-	$sql .= ") as user_count, \n";
-
-	//devices
-	$sql .= "(\n";
-	$sql .= "select count(*) from v_devices \n";
-	$sql .= "where domain_uuid = d.domain_uuid\n";
-	$sql .= ") as device_count, \n";
+	$sql .= "d.domain_enabled, \n";
 
 	//destinations
 	$sql .= "(\n";
@@ -93,11 +77,92 @@
 	$sql .= "where domain_uuid = d.domain_uuid\n";
 	$sql .= ") as destination_count, \n";
 
-	//faxes
+	//destinations DISABLED
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_destinations \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= "and (destination_enabled = 'false' or destination_enabled = '0')\n";
+	$sql .= ") as destination_disabled_count, \n";
+
+	//destinations INBOUND
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_destinations \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= "and (destination_type = 'inbound')\n";
+	$sql .= ") as destination_inbound_count, \n";
+
+	//destinations OUTBOUND
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_destinations \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= "and (destination_type = 'outbound')\n";
+	$sql .= ") as destination_outbound_count, \n";
+
+	//devices
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_devices \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= ") as device_count, \n";
+
+	//devices DISABLED
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_devices \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= "and (device_enabled = 'false' or device_enabled = '0')\n";
+	$sql .= ") as device_disabled_count, \n";
+
+	//extension
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_extensions \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= ") as extension_count, \n";
+
+	//extension DISABLED
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_extensions \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= "and (enabled = 'false' or enabled = '0')\n";
+	$sql .= ") as extension_disabled_count, \n";
+
+	//extension SETTINGS
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_extension_settings \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= "and (extension_setting_enabled = 'true' or extension_setting_enabled = '1')\n";
+	$sql .= ") as extension_settings_count, \n";
+
+	//users
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_users \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= ") as user_count, \n";
+
+	//users DIABLED
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_users \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= "and (user_enabled = 'false' or user_enabled = '0')\n";
+	$sql .= ") as user_disabled_count, \n";
+
+	//faxes servers
 	$sql .= "(\n";
 	$sql .= "select count(*) from v_fax \n";
 	$sql .= "where domain_uuid = d.domain_uuid\n";
 	$sql .= ") as fax_count, \n";
+
+	//faxes received
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_fax_files \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= "and fax_mode = 'rx'\n";
+	$sql .= ") as fax_received_count, \n";
+
+	//faxes sent
+	$sql .= "(\n";
+	$sql .= "select count(*) from v_fax_files \n";
+	$sql .= "where domain_uuid = d.domain_uuid\n";
+	$sql .= "and fax_mode = 'tx'\n";
+	$sql .= ") as fax_sent_count, \n";
 
 	//ivr
 	$sql .= "(\n";
@@ -105,11 +170,11 @@
 	$sql .= "where domain_uuid = d.domain_uuid\n";
 	$sql .= ") as ivr_count, \n";
 
-	//voicemail
+	//voicemail boxes
 	$sql .= "(\n";
 	$sql .= "select count(*) from v_voicemails \n";
 	$sql .= "where domain_uuid = d.domain_uuid\n";
-	$sql .= ") as voicemail_count, \n";
+	$sql .= ") as voicemail_box_count, \n";
 
 	//ring_group
 	$sql .= "(\n";
@@ -238,34 +303,85 @@
 	echo "<table class='tr_hover' width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
 	echo "<tr>\n";
 	echo th_order_by('domain_name', $text['label-domain_name'], $order_by, $order);
-	echo th_order_by('extension_count', $text['label-extensions'], $order_by,$order);
-	echo th_order_by('user_count', $text['label-users'], $order_by, $order);
-	echo th_order_by('device_count', $text['label-devices'], $order_by, $order);
-	echo th_order_by('destination_count', $text['label-destinations'], $order_by, $order);
-	echo th_order_by('fax_count', $text['label-faxes'], $order_by, $order);
-	echo th_order_by('ivr_count', $text['label-ivrs'], $order_by, $order);
-	echo th_order_by('voicemail_count', $text['label-voicemails'], $order_by, $order);
-	echo th_order_by('ring_group_count', $text['label-ring_groups'], $order_by, $order);
-	echo th_order_by('cc_queue_count', $text['label-cc_queues'], $order_by, $order);
-	echo th_order_by('contact_count', $text['label-contacts'], $order_by, $order);
-	echo th_order_by('accountcode_count', $text['label-accountcodes'], $order_by, $order);
+	if (permission_exists('domain_counts_destination_view')) {
+		echo th_order_by('destination_count', $text['label-destinations'], $order_by, $order);
+	}
+	if (permission_exists('domain_counts_device_view')) {
+		echo th_order_by('device_count', $text['label-devices'], $order_by, $order);
+	}
+	if (permission_exists('domain_counts_extension_view')) {
+		echo th_order_by('extension_count', $text['label-extensions'], $order_by,$order);
+	}
+	if (permission_exists('domain_counts_user_view')) {
+		echo th_order_by('user_count', $text['label-users'], $order_by, $order);
+	}
+	if (permission_exists('domain_counts_fax_view')) {
+		echo th_order_by('fax_count', $text['label-faxes'], $order_by, $order);
+	}
+	if (permission_exists('domain_counts_ivr_view')) {
+		echo th_order_by('ivr_count', $text['label-ivrs'], $order_by, $order);
+	}
+	if (permission_exists('domain_counts_vmail_box_view')) {
+		echo th_order_by('voicemail_box_count', $text['label-voicemail-boxes'], $order_by, $order);
+	}
+	if (permission_exists('domain_counts_ring_group_view')) {
+		echo th_order_by('ring_group_count', $text['label-ring_groups'], $order_by, $order);
+	}
+	if (permission_exists('domain_counts_call_center_queue_view')) {
+		echo th_order_by('cc_queue_count', $text['label-cc_queues'], $order_by, $order);
+	}
+	if (permission_exists('domain_counts_contact_view')) {
+		echo th_order_by('contact_count', $text['label-contacts'], $order_by, $order);
+	}
+	if (permission_exists('domain_counts_accountcode_view')) {
+		echo th_order_by('accountcode_count', $text['label-accountcodes'], $order_by, $order);
+	}
 	echo "</tr>\n";
 
 	if (isset($domain_counts)) foreach ($domain_counts as $key => $row) {
 
 		if (permission_exists('domain_counts_view_all') || (permission_exists('domain_counts_view_domain') && $_SESSION['domain_name'] == $row['domain_name']) ) {
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['domain_name'])."</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['extension_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['user_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['device_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['destination_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['fax_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['ivr_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['voicemail_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['ring_group_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['cc_queue_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['contact_count'])."&nbsp;</td>\n";
-			echo "	<td valign='top' class='".$row_style[$c]."'><a href='domain_counts_accountcodes.php?id=".escape($row['domain_uuid'])."'>".escape($row['accountcode_count'])."&nbsp;</td>\n";
+
+			$disabled = !in_array(strtolower($row['domain_enabled']), ['true', '1']);
+			$domain_label = escape($row['domain_name']);
+			if ($disabled) {
+				$domain_label .= " <span valign='top' class='domain-badge'>".$text['label-domain_disabled']."</span>";
+			}
+			echo "<tr>\n";
+			echo "	<td valign='top' class='".$row_style[$c]."'>".$domain_label."</td>\n";
+			if (permission_exists('domain_counts_destination_view')) {
+				echo "<td valign='top' class='".$row_style[$c]."' title=\"".escape($row['destination_disabled_count'])." disabled"."\n".escape($row['destination_inbound_count'])." inbound"."\n".escape($row['destination_outbound_count'])." outbound"."\"><span>".escape($row['destination_count'])."</span></td>\n";
+			}
+			if (permission_exists('domain_counts_device_view')) {
+				echo "<td valign='top' class='".$row_style[$c]."' title=\"".escape($row['device_disabled_count'])." disabled"."\"><span>".escape($row['device_count'])."</span></td>\n";
+			}
+			if (permission_exists('domain_counts_extension_view')) {
+				echo "<td valign='top' class='".$row_style[$c]."' title=\"".escape($row['extension_disabled_count'])." disabled"."\n".escape($row['extension_settings_count'])." settings enabled"."\"><span>".escape($row['extension_count'])."</span></td>\n";
+			}
+			if (permission_exists('domain_counts_user_view')) {
+				echo "<td valign='top' class='".$row_style[$c]."' title=\"".escape($row['user_disabled_count'])." disabled"."\"><span'>".escape($row['user_count'])."</span></td>\n";
+			}
+			if (permission_exists('domain_counts_fax_view')) {
+				echo "<td valign='top' class='".$row_style[$c]."' title=\"".escape($row['fax_received_count'])." received"."\n".escape($row['fax_sent_count'])." sent"."\"><span>".escape($row['fax_count'])."</span></td>\n";
+			}
+			if (permission_exists('domain_counts_ivr_view')) {
+				echo "<td valign='top' class='".$row_style[$c]."' title=\"".escape($row['ivr_disabled_count'])." disabled"."\"><span>".escape($row['ivr_count'])."</span></td>\n";
+			}
+			if (permission_exists('domain_counts_vmail_box_view')) {
+				echo "<td valign='top' class='".$row_style[$c]."'>".escape($row['voicemail_box_count'])."&nbsp;</td>\n";
+			}
+			if (permission_exists('domain_counts_ring_group_view')) {
+				echo "<td valign='top' class='".$row_style[$c]."'>".escape($row['ring_group_count'])."&nbsp;</td>\n";
+			}
+			if (permission_exists('domain_counts_call_center_queue_view')) {
+				echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['cc_queue_count'])."&nbsp;</td>\n";
+			}
+			if (permission_exists('domain_counts_contact_view')) {
+				echo "	<td valign='top' class='".$row_style[$c]."'>".escape($row['contact_count'])."&nbsp;</td>\n";
+			}
+			if (permission_exists('domain_counts_accountcode_view')) {
+				echo "	<td valign='top' class='".$row_style[$c]."'><a href='domain_counts_accountcodes.php?id=".escape($row['domain_uuid'])."'>".escape($row['accountcode_count'])."&nbsp;</td>\n";
+			}
 			echo "</tr>\n";
 			$c = ($c==0) ? 1 : 0;
 		}
