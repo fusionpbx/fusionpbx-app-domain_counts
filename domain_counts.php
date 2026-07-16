@@ -230,34 +230,146 @@
 			header('Content-type: application/octet-binary');
 			header("Content-Disposition: attachment; filename=domain-counts_" . date("Y-m-d") . ".csv");
 
-		//show the column names on the first line
-			$z = 0;
-			foreach($domain_counts[1] as $key => $val) {
-				if ($z == 0) {
-					echo '"'.$key.'"';
-				}
-				else {
-					echo ',"'.$key.'"';
-				}
-				$z++;
+		//build column headers based on permissions
+			$headers = [];
+			// Add domain_uuid ONLY if user has view_all permission
+			if (permission_exists('domain_counts_view_all')) {
+				$headers[] = '"domain_uuid"';
 			}
-			echo "\n";
+			if (permission_exists('domain_counts_view_all') || permission_exists('domain_counts_view_domain')) {
+				$headers[] = '"domain_name"';
+			}
+			if (permission_exists('domain_counts_view_all')) {
+				$headers[] = '"domain_enabled"';
+			}
+			if (permission_exists('domain_counts_destination_view')) {
+				$headers[] = '"destinations"';
+			}
+			if (permission_exists('domain_counts_device_view')) {
+				$headers[] = '"devices"';
+			}
+			if (permission_exists('domain_counts_extension_view')) {
+				$headers[] = '"extensions"';
+			}
+			if (permission_exists('domain_counts_user_view')) {
+				$headers[] = '"users"';
+			}
+			if (permission_exists('domain_counts_fax_view')) {
+				$headers[] = '"faxes"';
+			}
+			if (permission_exists('domain_counts_ivr_view')) {
+				$headers[] = '"ivrs"';
+			}
+			if (permission_exists('domain_counts_vmail_box_view')) {
+				$headers[] = '"voicemail_boxes"';
+			}
+			if (permission_exists('domain_counts_ring_group_view')) {
+				$headers[] = '"ring_groups"';
+			}
+			if (permission_exists('domain_counts_call_center_queue_view')) {
+				$headers[] = '"cc_queues"';
+			}
+			if (permission_exists('domain_counts_contact_view')) {
+				$headers[] = '"contacts"';
+			}
+			if (permission_exists('domain_counts_accountcode_view')) {
+				$headers[] = '"accountcodes"';
+			}
 
-		//add the values to the csv
-			$x = 0;
-			foreach($domain_counts as $domains) {
-				$z = 0;
-				foreach($domains as $key => $val) {
-					if ($z == 0) {
-						echo '"'.$domain_counts[$x][$key].'"';
+			echo implode(',', $headers) . "\n";
+
+		//build data rows based on permissions
+			if (is_array($domain_counts) && !empty($domain_counts)) {
+				foreach($domain_counts as $row) {
+					if (!is_array($row)) continue;
+
+					// --- ROW PERMISSION CHECK START ---
+					// Only export if user can see ALL domains OR if this domain matches their session domain
+					$can_view_row = false;
+					if (permission_exists('domain_counts_view_all')) {
+						$can_view_row = true;
+					} elseif (permission_exists('domain_counts_view_domain') && isset($_SESSION['domain_name'])) {
+						if ($row['domain_name'] == $_SESSION['domain_name']) {
+							$can_view_row = true;
+						}
 					}
-					else {
-						echo ',"'.$domain_counts[$x][$key].'"';
+
+					if (!$can_view_row) {
+						continue; // Skip this row
 					}
-					$z++;
+					// --- ROW PERMISSION CHECK END ---
+
+					$data_row = [];
+
+					// Add domain_uuid to data ONLY if user has view_all permission
+					if (permission_exists('domain_counts_view_all')) {
+						$val = $row['domain_uuid'] ?? '';
+						// UUIDs don't typically need CSV escaping, but safe to check
+						if (strpos($$val, ',') !== false || strpos($$val, '"') !== false) {
+							$val = '"' . str_replace('"', '""', $val) . '"';
+						}
+						$data_row[] = $val;
+					}
+
+					// domain_name
+					if (permission_exists('domain_counts_view_all') || permission_exists('domain_counts_view_domain')) {
+						$val = $row['domain_name'] ?? '';
+						if (strpos($$val, ',') !== false || strpos($$val, '"') !== false || strpos($val, "\n") !== false) {
+							$val = '"' . str_replace('"', '""', $val) . '"';
+						}
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_view_all')) {
+						$val = (isset($row['domain_enabled']) && $row['domain_enabled']) ? 1 : 0;
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_destination_view')) {
+						$val = $row['destination_count'] ?? '0';
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_device_view')) {
+						$val = $row['device_count'] ?? '0';
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_extension_view')) {
+						$val = $row['extension_count'] ?? '0';
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_user_view')) {
+						$val = $row['user_count'] ?? '0';
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_fax_view')) {
+						$val = $row['fax_count'] ?? '0';
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_ivr_view')) {
+						$val = $row['ivr_count'] ?? '0';
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_vmail_box_view')) {
+						$val = $row['voicemail_box_count'] ?? '0';
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_ring_group_view')) {
+						$val = $row['ring_group_count'] ?? '0';
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_call_center_queue_view')) {
+						$val = $row['cc_queue_count'] ?? '0';
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_contact_view')) {
+						$val = $row['contact_count'] ?? '0';
+						$data_row[] = $val;
+					}
+					if (permission_exists('domain_counts_accountcode_view')) {
+						$val = $row['accountcode_count'] ?? '0';
+						$data_row[] = $val;
+					}
+
+					echo implode(',', $data_row) . "\n";
 				}
-				echo "\n";
-				$x++;
 			}
 			exit;
 	}
