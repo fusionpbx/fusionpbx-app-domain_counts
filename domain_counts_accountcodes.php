@@ -51,13 +51,14 @@
 
 //get the http values and set them as variables
 	$domain_uuid = check_str($_GET["id"]);
-	$order_by = check_str($_GET["order_by"]);
-	$order = check_str($_GET["order"]);
+	$order_by = preg_replace('#[^a-zA-Z0-9_\-]#', '', $_GET["order_by"] ?? '');
+	$order = strtolower($_GET["order"] ?? '') == 'desc' ? 'desc' : 'asc';
 
 //handle search term
 	$search = check_str($_GET["search"]);
 	if (strlen($search) > 0) {
-		$sql_mod = "and accountcode ILIKE '%".$search."%' ";
+		$sql_mod = "and accountcode ILIKE :search ";
+		$parameters['search'] = '%'.strtolower($search).'%';
 	}
 	if (strlen($order_by) < 1) {
 		$order_by = "accountcode";
@@ -65,9 +66,10 @@
 	}
 
 //get total accountcode count from the database
-	$sql = "select count(DISTINCT accountcode) as num_rows from v_extensions where domain_uuid = '".$domain_uuid."' ".$sql_mod." ";
+	$sql = "select count(DISTINCT accountcode) as num_rows from v_extensions where domain_uuid = :domain_uuid ".$sql_mod." ";
+	$parameters['domain_uuid'] = $domain_uuid;
 	$database = new database;
-	$numeric_accountcodes = $database->select($sql, null, 'column');
+	$numeric_accountcodes = $database->select($sql, $parameters, 'column');
 	$total_accountcodes = $numeric_accountcodes;
 	unset($sql);
 
@@ -78,27 +80,31 @@
 	$_GET['page'] = check_str($_GET['page']);
 	list($paging_controls_mini, $rows_per_page, $var_3) = paging($total_accountcodes, $param, $rows_per_page, true); //top
 	list($paging_controls, $rows_per_page, $var_3) = paging($total_accountcodes, $param, $rows_per_page); //bottom
-	$offset = $rows_per_page * $_GET['page'];
+	$offset = $rows_per_page * (int)$_GET['page'];
 
 //get the domain name from the database
 	$sql = "SELECT domain_name  \n";
 	$sql .= "FROM v_domains \n";
-	$sql .= "WHERE domain_uuid = '$domain_uuid' \n";
+	$sql .= "WHERE domain_uuid = :domain_uuid \n";
+	$parameters['domain_uuid'] = $domain_uuid;
 	$database = new database;
-	$result = $database->select($sql, null);
+	$result = $database->select($sql, $parameters);
 	$domain_result = $database->result;
 	unset($database,$result);
 
 //get all the accountcodes from the database
 	$sql = "SELECT accountcode, count(*) AS count  \n";
 	$sql .= "FROM v_extensions \n";
-	$sql .= "WHERE domain_uuid = '$domain_uuid' and accountcode is not null \n";
+	$sql .= "WHERE domain_uuid = :domain_uuid and accountcode is not null \n";
 	$sql .= $sql_mod; //add search mod from above
 	$sql .= "GROUP BY accountcode ";
 	$sql .= "ORDER BY ".$order_by." ".$order." \n";
-	$sql .= "limit $rows_per_page offset $offset ";
+	$sql .= "limit :rows_per_page offset :offset ";
+	$parameters['domain_uuid'] = $domain_uuid;
+	$parameters['rows_per_page'] = (int)$rows_per_page;
+	$parameters['offset'] = (int)$offset;
 	$database = new database;
-	$directory = $database->select($sql, null);
+	$directory = $database->select($sql, $parameters);
 	unset($database);
 
 //set the http header

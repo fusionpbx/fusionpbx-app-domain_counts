@@ -50,14 +50,15 @@
 	$settings = new settings(['database' => $database, 'domain_uuid' => $_SESSION['domain_uuid'] ?? '', 'user_uuid' => $_SESSION['user_uuid'] ?? '']);
 
 //get the http values and set them as variables
-	$order_by = $_GET["order_by"] ?? '';
-	$order = $_GET["order"] ?? '';
+	$order_by = preg_replace('#[^a-zA-Z0-9_\-]#', '', $_GET["order_by"] ?? '');
+	$order = strtolower($_GET["order"] ?? '') == 'desc' ? 'desc' : 'asc';
 
 //handle search term
 	$search = $_GET["search"] ?? '';
 	$sql_mod = '';
 	if (strlen($search) > 0) {
-		$sql_mod = "WHERE d.domain_name like '%".$search."%' ";
+		$sql_mod = "WHERE lower(d.domain_name) like :search ";
+		$parameters['search'] = '%'.strtolower($search).'%';
 	}
 	if (strlen($order_by) < 1) {
 		$order_by = "domain_name";
@@ -204,7 +205,7 @@
 	$sql .= $sql_mod; //add search mod from above
 	$sql .= "ORDER BY ".$order_by." ".$order." \n";
 
-	$domain_counts = $database->select($sql, null);
+	$domain_counts = $database->select($sql, $parameters ?? null);
 
 //add the search string
 	if (!empty($search)) {
